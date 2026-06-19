@@ -496,6 +496,105 @@
     .gh-msg.ok   { color: var(--accent-bright); }
     .gh-msg.err  { color: var(--danger); }
     .gh-msg.info { color: var(--ink-soft); }
+
+    /* House points (header) */
+    .points-badge {
+      margin-right: auto;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      background: var(--accent);
+      color: #f3ecd8;
+      border: 1px solid var(--gold);
+      border-radius: 12px;
+      padding: 6px 12px;
+      min-width: 64px;
+    }
+    .points-badge .pts-num {
+      font-family: 'Suez One', serif;
+      font-size: 22px;
+      line-height: 1;
+      color: var(--gold);
+    }
+    .points-badge .pts-lbl {
+      font-size: 9px;
+      letter-spacing: 0.12em;
+      margin-top: 3px;
+      opacity: 0.85;
+    }
+
+    /* Trivia card */
+    .trivia-card {
+      border: 1px solid var(--gold);
+      background:
+        radial-gradient(circle at 90% 0%, rgba(176,141,62,0.10), transparent 50%),
+        var(--card);
+    }
+    .trivia-head {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .trivia-level {
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      padding: 3px 9px;
+      border-radius: 20px;
+      border: 1px solid var(--line);
+      color: var(--ink-soft);
+      background: var(--card-alt);
+    }
+    .trivia-level.easy { color: var(--accent); }
+    .trivia-level.med  { color: var(--gold); border-color: var(--gold); }
+    .trivia-level.hard { color: var(--danger); border-color: var(--danger); }
+
+    .trivia-q {
+      font-size: 17px;
+      font-weight: 500;
+      line-height: 1.5;
+      color: var(--ink);
+      margin-bottom: 14px;
+    }
+    .trivia-opts { display: flex; flex-direction: column; gap: 8px; }
+
+    .trivia-opt {
+      text-align: right;
+      padding: 11px 14px;
+      border: 1.5px solid var(--line);
+      border-radius: 9px;
+      background: #fffdf5;
+      color: var(--ink);
+      font-size: 15px;
+      font-family: inherit;
+      cursor: pointer;
+      transition: background 0.12s, border-color 0.12s;
+    }
+    .trivia-opt:hover:not(:disabled) { border-color: var(--accent-bright); background: #fff; }
+    .trivia-opt:disabled { cursor: default; }
+    .trivia-opt.correct { background: #dde9d8; border-color: var(--accent); color: var(--accent); font-weight: 700; }
+    .trivia-opt.wrong   { background: #ecd6cb; border-color: var(--danger); color: var(--danger); }
+    .trivia-opt.muted   { opacity: 0.55; }
+
+    .trivia-result {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: 9px;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .trivia-result.win  { background: var(--accent); color: #f3ecd8; }
+    .trivia-result.lose { background: var(--card-alt); color: var(--ink); border: 1px solid var(--line); }
+    .trivia-result .src { font-size: 12px; opacity: 0.8; display: block; margin-top: 4px; }
+
+    .trivia-done {
+      text-align: center;
+      color: var(--ink-soft);
+      font-size: 14px;
+      padding: 8px 0;
+      line-height: 1.6;
+    }
   </style>
 </head>
 <body>
@@ -506,6 +605,10 @@
     <div>
       <h1>מעקב משקל</h1>
       <div style="font-size:12px;color:var(--silver);font-weight:500;letter-spacing:0.1em;margin-top:2px">בית סלית'רין · הוגוורטס</div>
+    </div>
+    <div class="points-badge" title="נקודות בית סלית'רין">
+      <span class="pts-num" id="points-num">0</span>
+      <span class="pts-lbl">נקודות</span>
     </div>
   </header>
 
@@ -525,6 +628,9 @@
     <button class="btn-save" onclick="handleSave()">שמור</button>
     <div class="error-msg" id="msg"></div>
   </div>
+
+  <!-- Daily trivia card -->
+  <div class="card trivia-card" id="trivia-card"></div>
 
   <!-- Current week card -->
   <div class="card" id="current-week-card"></div>
@@ -651,6 +757,130 @@
     return entries.reduce((s, e) => s + e.weight, 0) / entries.length;
   }
 
+  // ── Trivia (Harry Potter, books only) ─────────────────────────
+  // Each question verified against the full book text. level → bonus
+  // points. One question per day, chosen deterministically by date.
+
+  const POINTS = { easy: 5, med: 10, hard: 20 };
+  const LEVEL_LABEL = { easy: 'קל', med: 'בינוני', hard: 'קשה' };
+  const BOOK_NAME = {
+    1: 'אבן החכמים', 2: 'חדר הסתרים', 3: 'אסיר אזקבאן', 4: 'גביע האש',
+    5: 'מסדר עוף החול', 6: 'הנסיך חצוי-הדם', 7: 'אוצרות המוות'
+  };
+
+  const TRIVIA = [
+    { id: 1,  level: 'easy', book: 1, q: 'כמה נקודות מזכה תפיסת הסניץ\' הזהוב?', opts: ['50', '100', '150', '200'], correct: 2 },
+    { id: 2,  level: 'easy', book: 1, q: 'באיזו כתובת גרים בני דורסלי?', opts: ['פריווט דרייב 4', 'פריווט דרייב 12', 'ספינרס אנד 4', 'גרימולד פלייס 12'], correct: 0 },
+    { id: 3,  level: 'easy', book: 1, q: 'מה שם הינשופית של הארי?', opts: ['הדוויג', 'אררולה', 'פוקס', 'נורברט'], correct: 0 },
+    { id: 4,  level: 'easy', book: 1, q: 'מי לימד הגנה מפני כוחות האופל בשנה הראשונה?', opts: ['פרופ\' קווירל', 'סוורוס סנייפ', 'גילדרוי לוקהארט', 'רמוס לופין'], correct: 0 },
+    { id: 5,  level: 'easy', book: 1, q: 'מי שומר המפתחות והשטחים של הוגוורטס?', opts: ['רוביאוס האגריד', 'ארגוס פילץ\'', 'אלבוס דמבלדור', 'מינרבה מקגונגל'], correct: 0 },
+    { id: 6,  level: 'med',  book: 1, q: 'כמה מדרגות יש בהוגוורטס?', opts: ['77', '100', '142', '200'], correct: 2 },
+    { id: 7,  level: 'med',  book: 1, q: 'מאיזה עץ עשוי שרביטו של הארי?', opts: ['עץ אֵלה (holly)', 'עץ יוּ', 'מהגוני', 'אלון'], correct: 0 },
+    { id: 8,  level: 'hard', book: 1, q: 'מה אורך שרביטו של הארי?', opts: ['9 אינץ\'', '10 אינץ\'', '11 אינץ\'', '13.5 אינץ\''], correct: 2 },
+    { id: 9,  level: 'med',  book: 1, q: 'מה שם הכלב התלת-ראשי ששמר על אבן החכמים?', opts: ['פלאפי', 'פאנג', 'נורברט', 'פוקס'], correct: 0 },
+    { id: 10, level: 'hard', book: 1, q: 'מיהו היוצר היחיד הידוע של אבן החכמים?', opts: ['ניקולא פלאמל', 'אלבוס דמבלדור', 'גלרט גרינדלוולד', 'ניקולא פרנל'], correct: 0 },
+    { id: 11, level: 'easy', book: 2, q: 'באיזה בית בהוגוורטס היה טום רידל (וולדמורט)?', opts: ['סלית\'רין', 'גריפינדור', 'רייבנקלו', 'הפלפאף'], correct: 0 },
+    { id: 12, level: 'easy', book: 2, q: 'מה שם רוח הרפאים שרודפת בשירותי הבנות?', opts: ['מירטל המייללת', 'ניק כמעט-עריף-ראש', 'הברון העקוב מדם', 'הנזיר השמן'], correct: 0 },
+    { id: 13, level: 'med',  book: 2, q: 'מה שמו המלא של טום רידל?', opts: ['טום מארוולו רידל', 'טום אלביוס רידל', 'טום סלית\'רין רידל', 'טום וולפריק רידל'], correct: 0 },
+    { id: 14, level: 'med',  book: 2, q: 'איזה יצור חי בחדר הסתרים?', opts: ['בזיליסק', 'אקרומנטולה', 'היפוגריף', 'דרקון'], correct: 0 },
+    { id: 15, level: 'hard', book: 2, q: 'מהו ההורקרוקס הראשון של וולדמורט שהושמד?', opts: ['היומן', 'הטבעת', 'המדליון', 'הגביע'], correct: 0 },
+    { id: 16, level: 'med',  book: 2, q: 'באיזה תחום עובד ארתור ויזלי במשרד הקסמים?', opts: ['שימוש לרעה בחפצי מאגלים', 'משחקי ספורט וקסם', 'תחבורה קסומה', 'אכיפת חוק הקסמים'], correct: 0 },
+    { id: 17, level: 'easy', book: 3, q: 'מה שם חתולה של הרמיוני?', opts: ['קרוקשאנקס', 'קרוקס', 'גברת נוריס', 'פאנג'], correct: 0 },
+    { id: 18, level: 'easy', book: 3, q: 'מה שם העכבר של רון (שהתגלה כפיטר פטיגרו)?', opts: ['סקאברס', 'פיגוויג\'', 'נורברט', 'ריפר'], correct: 0 },
+    { id: 19, level: 'med',  book: 3, q: 'לְמה הופך פרופ\' לופין בלילות ירח מלא?', opts: ['זאב אדם', 'ערפד', 'חתול', 'דמנטור'], correct: 0 },
+    { id: 20, level: 'med',  book: 3, q: 'מה צורת הפטרונוס של הארי?', opts: ['אייל', 'לוטרה', 'איילה', 'כלב'], correct: 0 },
+    { id: 21, level: 'easy', book: 3, q: 'מה שם האוטובוס הקסום שהארי עולה עליו?', opts: ['אוטובוס האביר', 'אקספרס הוגוורטס', 'רכבת הלילה', 'הנודד הסגול'], correct: 0 },
+    { id: 22, level: 'hard', book: 3, q: 'מה היה כינויו של ג\'יימס פוטר בקרב ה"שודדים"?', opts: ['פרונגס', 'פדפוט', 'מוּני', 'וורמטייל'], correct: 0 },
+    { id: 23, level: 'easy', book: 4, q: 'מהי הקללה ההורגת?', opts: ['אוודה קדברה', 'קרוקיו', 'אימפריו', 'אקספלירמוס'], correct: 0 },
+    { id: 24, level: 'med',  book: 4, q: 'כמה בתי-ספר לקסמים התחרו בטורניר שלושת הקוסמים?', opts: ['שניים', 'שלושה', 'ארבעה', 'חמישה'], correct: 1 },
+    { id: 25, level: 'med',  book: 4, q: 'איזו קללה בלתי-נסלחת משתלטת על רצון הקורבן?', opts: ['קללת אימפריוס', 'קללת קרוקיאטוס', 'אוודה קדברה', 'סקטומסמפרה'], correct: 0 },
+    { id: 26, level: 'easy', book: 5, q: 'מה שם ארגון ההתנגדות החשאי שהקים דמבלדור?', opts: ['מסדר עוף החול', 'גדוד דמבלדור', 'אוכלי המוות', 'המיניסטריון'], correct: 0 },
+    { id: 27, level: 'med',  book: 5, q: 'מה צורת הפטרונוס של הרמיוני?', opts: ['לוטרה', 'אייל', 'חתול', 'ציפור'], correct: 0 },
+    { id: 28, level: 'med',  book: 5, q: 'מי הציקה לתלמידים כ"מפקחת עליונה" מטעם המשרד?', opts: ['דולורס אמברידג\'', 'ריטה סקיטר', 'נרקיסה מאלפוי', 'בלטריקס לסטריינג\''], correct: 0 },
+    { id: 29, level: 'med',  book: 5, q: 'מה השם שבו כינו התלמידים את קבוצת ההגנה הסודית של הארי?', opts: ['גדוד דמבלדור', 'מסדר עוף החול', 'החזית', 'שומרי הוגוורטס'], correct: 0 },
+    { id: 30, level: 'easy', book: 6, q: 'מי הרג את אלבוס דמבלדור?', opts: ['סוורוס סנייפ', 'דרקו מאלפוי', 'לורד וולדמורט', 'בלטריקס לסטריינג\''], correct: 0 },
+    { id: 31, level: 'med',  book: 6, q: 'מה שם השיקוי שמעניק מזל מושלם ליום שלם?', opts: ['פליקס פליציס', 'אמורטנטיה', 'שיקוי הריבוי', 'וריטסרום'], correct: 0 },
+    { id: 32, level: 'med',  book: 6, q: 'לכמה הורקרוקסים תכנן וולדמורט לפצל את נשמתו?', opts: ['שלושה', 'חמישה', 'שישה', 'שבעה'], correct: 2 },
+    { id: 33, level: 'hard', book: 6, q: 'מה שמה של אמו של וולדמורט?', opts: ['מֵרופ גאונט', 'בלטריקס לסטריינג\'', 'אריאנה דמבלדור', 'אילין פרינס'], correct: 0 },
+    { id: 34, level: 'easy', book: 7, q: 'איזה מאוצרות המוות הופך את נושאו לבלתי-נראה?', opts: ['גלימת ההיעלמות', 'אבן התחייה', 'שרביט הסמבוק', 'מפת השודדים'], correct: 0 },
+    { id: 35, level: 'med',  book: 7, q: 'מה צורת הפטרונוס של סוורוס סנייפ?', opts: ['איילה', 'אייל', 'לוטרה', 'עוף החול'], correct: 0 },
+    { id: 36, level: 'hard', book: 7, q: 'מה שמו המלא של אלבוס דמבלדור?', opts: ['אלבוס פרסיבל וולפריק בריאן דמבלדור', 'אלבוס וולפריק בריאן דמבלדור', 'אלבוס פרסיבל בריאן דמבלדור', 'אלבוס בריאן פרסיבל וולפריק דמבלדור'], correct: 0 },
+    { id: 37, level: 'med',  book: 7, q: 'מה חרוט על מצבתו של דובי?', opts: ['כאן שוכן דובי, שדון חופשי', 'לזכר דובי הנאמן', 'דובי, קוסם חופשי', 'כאן נח שדון אמיץ'], correct: 0 }
+  ];
+
+  function daysSince(dateStr) {
+    return Math.floor(new Date(dateStr + 'T00:00:00').getTime() / 86400000);
+  }
+
+  function questionFor(dateStr) {
+    if (!TRIVIA.length) return null;
+    const n = TRIVIA.length;
+    return TRIVIA[((daysSince(dateStr) % n) + n) % n];
+  }
+
+  function totalPoints() { return load().points || 0; }
+
+  function updatePointsDisplay() {
+    document.getElementById('points-num').textContent = totalPoints();
+  }
+
+  function answerTrivia(idx) {
+    const today = todayStr();
+    const data = load();
+    data.trivia = data.trivia || {};
+    if (data.trivia[today]) return;            // already answered today
+    const q = questionFor(today);
+    if (!q) return;
+    const correct = idx === q.correct;
+    const pts = correct ? POINTS[q.level] : 0;
+    data.trivia[today] = { id: q.id, chosen: idx, correct, pts };
+    data.points = (data.points || 0) + pts;
+    save(data);
+    renderTrivia();
+    updatePointsDisplay();
+  }
+
+  function renderTrivia() {
+    const card = document.getElementById('trivia-card');
+    const q = questionFor(todayStr());
+    if (!q) { card.style.display = 'none'; return; }
+
+    const data = load();
+    const ans = (data.trivia || {})[todayStr()];
+
+    let html = `
+      <div class="trivia-head">
+        <div class="card-title" style="margin:0;border:none;padding:0">חידון היום ⚡</div>
+        <span class="trivia-level ${q.level}">${LEVEL_LABEL[q.level]} · ${POINTS[q.level]} נק'</span>
+      </div>
+      <div class="trivia-q">${q.q}</div>
+      <div class="trivia-opts">`;
+
+    q.opts.forEach((opt, i) => {
+      let cls = 'trivia-opt';
+      if (ans) {
+        if (i === q.correct) cls += ' correct';
+        else if (i === ans.chosen) cls += ' wrong';
+        else cls += ' muted';
+      }
+      html += `<button class="${cls}" ${ans ? 'disabled' : ''} onclick="answerTrivia(${i})">${opt}</button>`;
+    });
+    html += `</div>`;
+
+    if (ans) {
+      if (ans.correct) {
+        html += `<div class="trivia-result win">נכון! זכית ב-${ans.pts} נקודות לבית סלית'רין 🐍
+                 <span class="src">מתוך: הארי פוטר ו${BOOK_NAME[q.book]}</span></div>`;
+      } else {
+        html += `<div class="trivia-result lose">לא הפעם. התשובה הנכונה מסומנת למעלה.
+                 <span class="src">מתוך: הארי פוטר ו${BOOK_NAME[q.book]} · נסה שוב מחר!</span></div>`;
+      }
+    }
+
+    card.innerHTML = html;
+    card.style.display = 'block';
+  }
+
   // ── Actions ───────────────────────────────────────────────────
 
   function handleSave() {
@@ -708,7 +938,9 @@
       app: 'weight-tracker',
       version: 1,
       exportedAt: new Date().toISOString(),
-      entries: data.entries
+      entries: data.entries,
+      points: data.points || 0,
+      trivia: data.trivia || {}
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url  = URL.createObjectURL(blob);
@@ -745,7 +977,11 @@
           }
         }
         const merged = Object.keys(map).sort().map(d => ({ date: d, weight: map[d] }));
-        save({ entries: merged });
+        save({
+          entries: merged,
+          points: Math.max(data.points || 0, (parsed && parsed.points) || 0),
+          trivia: Object.assign({}, data.trivia || {}, (parsed && parsed.trivia) || {})
+        });
         render();
         showMsg('success', `יובאו ${added} רשומות בהצלחה`);
       } catch (err) {
@@ -813,7 +1049,9 @@
       const payload = {
         app: 'weight-tracker', version: 1,
         exportedAt: new Date().toISOString(),
-        entries: data.entries
+        entries: data.entries,
+        points: data.points || 0,
+        trivia: data.trivia || {}
       };
       const body = JSON.stringify(payload, null, 2);
 
@@ -866,7 +1104,11 @@
         }
       }
       const merged = Object.keys(map).sort().map(d => ({ date: d, weight: map[d] }));
-      save({ entries: merged });
+      save({
+        entries: merged,
+        points: Math.max(data.points || 0, (parsed && parsed.points) || 0),
+        trivia: Object.assign({}, data.trivia || {}, (parsed && parsed.trivia) || {})
+      });
       render();
       ghMsg('ok', `נמשכו ${added} רשומות מגיטהאב ✓`);
     } catch (e) {
@@ -1134,6 +1376,8 @@
   function render() {
     renderCurrentWeek();
     renderHistory();
+    renderTrivia();
+    updatePointsDisplay();
   }
 
   const dateInput = document.getElementById('date-input');

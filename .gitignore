@@ -5,3 +5,7 @@ Thumbs.db
 
 # Node (only if serve/tooling is ever added)
 node_modules/
+
+# Copyrighted source material — NEVER commit. Used locally only for
+# verifying/authoring trivia. The PDF and any extracted text stay private.
+_sources/
