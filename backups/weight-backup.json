@@ -1,6 +1,43 @@
 {
   "app": "weight-tracker",
   "version": 1,
-  "exportedAt": null,
-  "entries": []
+  "exportedAt": "2026-06-19T12:03:36.212Z",
+  "entries": [
+    {
+      "date": "2026-06-02",
+      "weight": 91.3
+    },
+    {
+      "date": "2026-06-03",
+      "weight": 90.8
+    },
+    {
+      "date": "2026-06-04",
+      "weight": 90.2
+    },
+    {
+      "date": "2026-06-05",
+      "weight": 90.1
+    },
+    {
+      "date": "2026-06-14",
+      "weight": 90.8
+    },
+    {
+      "date": "2026-06-16",
+      "weight": 89.3
+    },
+    {
+      "date": "2026-06-17",
+      "weight": 90.5
+    },
+    {
+      "date": "2026-06-18",
+      "weight": 89.2
+    },
+    {
+      "date": "2026-06-19",
+      "weight": 90
+    }
+  ]
 }
