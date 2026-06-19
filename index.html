@@ -1,0 +1,898 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>מעקב משקל</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: system-ui, -apple-system, 'Segoe UI', sans-serif;
+      background: #f1f5f9;
+      color: #1e293b;
+      min-height: 100vh;
+      padding: 16px;
+    }
+
+    .container {
+      max-width: 480px;
+      margin: 0 auto;
+    }
+
+    header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+      padding-top: 8px;
+    }
+
+    header h1 {
+      font-size: 22px;
+      font-weight: 700;
+      color: #0f172a;
+    }
+
+    .card {
+      background: white;
+      border-radius: 14px;
+      padding: 20px;
+      margin-bottom: 14px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.07);
+    }
+
+    .card-title {
+      font-size: 11px;
+      font-weight: 700;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 14px;
+    }
+
+    /* Input */
+    .input-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+
+    .input-wrap {
+      flex: 1;
+      position: relative;
+    }
+
+    .input-wrap label {
+      display: block;
+      font-size: 11px;
+      color: #94a3b8;
+      margin-bottom: 4px;
+    }
+
+    input[type="number"], input[type="date"] {
+      width: 100%;
+      padding: 10px 12px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 9px;
+      font-size: 16px;
+      font-family: inherit;
+      color: #1e293b;
+      background: #f8fafc;
+      outline: none;
+      transition: border-color 0.15s, background 0.15s;
+      direction: ltr;
+    }
+
+    input:focus {
+      border-color: #3b82f6;
+      background: white;
+    }
+
+    .btn-save {
+      width: 100%;
+      padding: 12px;
+      background: #3b82f6;
+      color: white;
+      border: none;
+      border-radius: 9px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s, transform 0.1s;
+      margin-top: 4px;
+    }
+
+    .btn-save:hover { background: #2563eb; }
+    .btn-save:active { background: #1d4ed8; transform: scale(0.99); }
+
+    .error-msg {
+      color: #ef4444;
+      font-size: 13px;
+      margin-top: 8px;
+      min-height: 18px;
+    }
+
+    .success-msg {
+      color: #10b981;
+      font-size: 13px;
+      margin-top: 8px;
+      min-height: 18px;
+    }
+
+    /* Current week */
+    .week-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 16px;
+    }
+
+    .week-avg-big {
+      font-size: 42px;
+      font-weight: 800;
+      color: #3b82f6;
+      line-height: 1;
+    }
+
+    .week-avg-big .unit {
+      font-size: 18px;
+      font-weight: 500;
+      color: #93c5fd;
+      margin-right: 3px;
+    }
+
+    .week-status {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+
+    .week-badge {
+      background: #f0f9ff;
+      color: #0284c7;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: 20px;
+      border: 1px solid #bae6fd;
+      white-space: nowrap;
+    }
+
+    .week-badge.final {
+      background: #f0fdf4;
+      color: #16a34a;
+      border-color: #86efac;
+    }
+
+    /* Day dots */
+    .days-row {
+      display: flex;
+      gap: 6px;
+      margin-top: 16px;
+    }
+
+    .day-item {
+      flex: 1;
+      text-align: center;
+    }
+
+    .day-dot {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      margin: 0 auto 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .day-dot.logged { background: #3b82f6; color: white; }
+    .day-dot.today-empty { background: #dbeafe; color: #2563eb; border: 2px dashed #3b82f6; }
+    .day-dot.future { background: #f1f5f9; color: #cbd5e1; }
+    .day-dot.past-empty { background: #fee2e2; color: #fca5a5; }
+
+    .day-label {
+      font-size: 10px;
+      color: #94a3b8;
+      font-weight: 500;
+    }
+
+    .day-weight {
+      font-size: 10px;
+      color: #64748b;
+      font-weight: 600;
+    }
+
+    /* No data state */
+    .empty-week {
+      color: #94a3b8;
+      font-size: 15px;
+      padding: 8px 0 16px;
+    }
+
+    /* History */
+    .history-list {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+
+    .history-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 12px 0;
+      border-bottom: 1px solid #f1f5f9;
+    }
+
+    .history-row:last-child { border-bottom: none; }
+
+    .history-week-label {
+      font-size: 13px;
+      color: #64748b;
+    }
+
+    .history-days-label {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 2px;
+    }
+
+    .history-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .history-avg-val {
+      font-size: 18px;
+      font-weight: 700;
+      color: #1e293b;
+      direction: ltr;
+    }
+
+    .history-delta {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 2px 7px;
+      border-radius: 20px;
+    }
+
+    .history-delta.down { background: #f0fdf4; color: #16a34a; }
+    .history-delta.up   { background: #fef2f2; color: #dc2626; }
+    .history-delta.flat { background: #f8fafc; color: #94a3b8; }
+
+    .empty-history {
+      color: #94a3b8;
+      font-size: 14px;
+      text-align: center;
+      padding: 16px 0 8px;
+    }
+
+    /* Chart */
+    .chart-wrap {
+      margin-top: 20px;
+      overflow-x: auto;
+    }
+
+    /* Delete entry link */
+    .delete-entry {
+      font-size: 11px;
+      color: #fca5a5;
+      cursor: pointer;
+      text-decoration: underline;
+      background: none;
+      border: none;
+      font-family: inherit;
+      padding: 0;
+    }
+
+    .delete-entry:hover { color: #ef4444; }
+
+    /* Expandable history week */
+    .history-week {
+      border-bottom: 1px solid #f1f5f9;
+    }
+    .history-week:last-child { border-bottom: none; }
+
+    .history-row { cursor: pointer; user-select: none; }
+    .history-row:hover .history-week-label { color: #3b82f6; }
+
+    .chevron {
+      font-size: 11px;
+      color: #cbd5e1;
+      transition: transform 0.15s;
+      display: inline-block;
+      margin-left: 6px;
+    }
+    .chevron.open { transform: rotate(90deg); color: #3b82f6; }
+
+    .week-detail {
+      padding: 4px 0 14px;
+      display: none;
+    }
+    .week-detail.open { display: block; }
+
+    .detail-day {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      margin: 4px 0;
+      background: #f8fafc;
+      border-radius: 8px;
+    }
+
+    .detail-day-label {
+      font-size: 13px;
+      color: #475569;
+      font-weight: 500;
+    }
+
+    .detail-day-empty {
+      font-size: 13px;
+      color: #cbd5e1;
+    }
+
+    .detail-day-right {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .detail-edit-input {
+      width: 72px;
+      padding: 5px 8px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 7px;
+      font-size: 14px;
+      font-family: inherit;
+      direction: ltr;
+      text-align: center;
+    }
+
+    .detail-edit-input:focus { border-color: #3b82f6; outline: none; }
+
+    .mini-btn {
+      font-size: 12px;
+      padding: 5px 10px;
+      border-radius: 7px;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      font-weight: 600;
+    }
+    .mini-btn.save { background: #3b82f6; color: white; }
+    .mini-btn.save:hover { background: #2563eb; }
+    .mini-btn.del { background: #fee2e2; color: #dc2626; }
+    .mini-btn.del:hover { background: #fecaca; }
+
+    /* Backup card */
+    .backup-row {
+      display: flex;
+      gap: 10px;
+    }
+
+    .btn-backup {
+      flex: 1;
+      padding: 11px;
+      border-radius: 9px;
+      border: 1.5px solid #e2e8f0;
+      background: #f8fafc;
+      color: #334155;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      font-family: inherit;
+      transition: background 0.15s, border-color 0.15s;
+    }
+    .btn-backup:hover { background: #f1f5f9; border-color: #cbd5e1; }
+
+    .backup-hint {
+      font-size: 11px;
+      color: #94a3b8;
+      margin-top: 10px;
+      line-height: 1.5;
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <span style="font-size:26px">⚖️</span>
+    <h1>מעקב משקל</h1>
+  </header>
+
+  <!-- Input card -->
+  <div class="card">
+    <div class="card-title">הזנת משקל</div>
+    <div class="input-row">
+      <div class="input-wrap">
+        <label for="weight-input">משקל (ק״ג)</label>
+        <input type="number" id="weight-input" placeholder="85.3" step="0.1" min="30" max="300">
+      </div>
+      <div class="input-wrap">
+        <label for="date-input">תאריך</label>
+        <input type="date" id="date-input">
+      </div>
+    </div>
+    <button class="btn-save" onclick="handleSave()">שמור</button>
+    <div class="error-msg" id="msg"></div>
+  </div>
+
+  <!-- Current week card -->
+  <div class="card" id="current-week-card"></div>
+
+  <!-- History card -->
+  <div class="card" id="history-card">
+    <div class="card-title">היסטוריה שבועית</div>
+    <div id="history-content"></div>
+  </div>
+
+  <!-- Backup card -->
+  <div class="card">
+    <div class="card-title">גיבוי ושחזור</div>
+    <div class="backup-row">
+      <button class="btn-backup" onclick="exportData()">⬇️ ייצוא לקובץ</button>
+      <button class="btn-backup" onclick="document.getElementById('import-file').click()">⬆️ ייבוא מקובץ</button>
+    </div>
+    <input type="file" id="import-file" accept="application/json,.json" style="display:none" onchange="importData(event)">
+    <div class="backup-hint">
+      המידע נשמר אוטומטית בדפדפן של מכשיר זה.<br>
+      מומלץ לייצא קובץ גיבוי מדי פעם — כדי לא לאבד נתונים אם הדפדפן מתנקה, וכדי להעביר בין מכשירים.
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // ── Date helpers ──────────────────────────────────────────────
+
+  // Always format dates using LOCAL time to avoid UTC-offset bugs
+  function dateToStr(d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }
+
+  function todayStr() {
+    return dateToStr(new Date());
+  }
+
+  function dayOfWeek(dateStr) {
+    return new Date(dateStr + 'T00:00:00').getDay(); // 0=Sun … 6=Sat
+  }
+
+  function isSaturday(dateStr) { return dayOfWeek(dateStr) === 6; }
+  function isFriday(dateStr)   { return dayOfWeek(dateStr) === 5; }
+
+  // Sunday of the week containing dateStr
+  function getWeekStart(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() - d.getDay());
+    return dateToStr(d);
+  }
+
+  // Add N days to dateStr
+  function addDays(dateStr, n) {
+    const d = new Date(dateStr + 'T00:00:00');
+    d.setDate(d.getDate() + n);
+    return dateToStr(d);
+  }
+
+  function formatShort(dateStr) {
+    const d = new Date(dateStr + 'T00:00:00');
+    return `${d.getDate()}/${d.getMonth() + 1}`;
+  }
+
+  function formatWeekRange(weekStart) {
+    return `${formatShort(weekStart)} – ${formatShort(addDays(weekStart, 5))}`;
+  }
+
+  const DAY_LETTERS = ['א׳', 'ב׳', 'ג׳', 'ד׳', 'ה׳', 'ו׳'];
+
+  // Which past weeks are expanded in the history view
+  const openWeeks = new Set();
+
+  // ── Storage ───────────────────────────────────────────────────
+
+  function load() {
+    try { return JSON.parse(localStorage.getItem('wt_data') || '{"entries":[]}'); }
+    catch { return { entries: [] }; }
+  }
+
+  function save(data) {
+    localStorage.setItem('wt_data', JSON.stringify(data));
+  }
+
+  // entries grouped by week-start string
+  function byWeek(entries) {
+    const map = {};
+    for (const e of entries) {
+      const ws = getWeekStart(e.date);
+      (map[ws] = map[ws] || []).push(e);
+    }
+    return map;
+  }
+
+  function avg(entries) {
+    if (!entries.length) return null;
+    return entries.reduce((s, e) => s + e.weight, 0) / entries.length;
+  }
+
+  // ── Actions ───────────────────────────────────────────────────
+
+  function handleSave() {
+    const weightEl = document.getElementById('weight-input');
+    const dateEl   = document.getElementById('date-input');
+    const msgEl    = document.getElementById('msg');
+
+    msgEl.className = 'error-msg';
+    msgEl.textContent = '';
+
+    const dateVal   = dateEl.value;
+    const weightVal = parseFloat(weightEl.value);
+
+    if (!dateVal)                              { return showMsg('error', 'בחר תאריך'); }
+    if (isSaturday(dateVal))                   { return showMsg('error', 'שבת — אין הזנה ביום זה'); }
+    if (isNaN(weightVal) || weightVal < 30 || weightVal > 300)
+                                               { return showMsg('error', 'הזן משקל תקין (30–300)'); }
+
+    const data = load();
+    const idx  = data.entries.findIndex(e => e.date === dateVal);
+    const isUpdate = idx >= 0;
+
+    if (isUpdate) {
+      data.entries[idx].weight = weightVal;
+    } else {
+      data.entries.push({ date: dateVal, weight: weightVal });
+      data.entries.sort((a, b) => a.date.localeCompare(b.date));
+    }
+
+    save(data);
+    weightEl.value = '';
+    showMsg('success', isUpdate ? 'עודכן בהצלחה' : 'נשמר בהצלחה');
+    render();
+  }
+
+  function deleteEntry(date) {
+    const data = load();
+    data.entries = data.entries.filter(e => e.date !== date);
+    save(data);
+    render();
+  }
+
+  function showMsg(type, text) {
+    const el = document.getElementById('msg');
+    el.className = type === 'error' ? 'error-msg' : 'success-msg';
+    el.textContent = text;
+    if (type === 'success') setTimeout(() => { el.textContent = ''; }, 2500);
+  }
+
+  // ── Backup: export / import ───────────────────────────────────
+
+  function exportData() {
+    const data = load();
+    const payload = {
+      app: 'weight-tracker',
+      version: 1,
+      exportedAt: new Date().toISOString(),
+      entries: data.entries
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url  = URL.createObjectURL(blob);
+    const a    = document.createElement('a');
+    a.href = url;
+    a.download = `weight-backup-${todayStr()}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showMsg('success', 'קובץ הגיבוי הורד');
+  }
+
+  function importData(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function (e) {
+      try {
+        const parsed = JSON.parse(e.target.result);
+        const incoming = Array.isArray(parsed) ? parsed : parsed.entries;
+        if (!Array.isArray(incoming)) throw new Error('format');
+
+        // Validate + merge (imported entries override existing same-date)
+        const data = load();
+        const map = {};
+        for (const en of data.entries) map[en.date] = en.weight;
+        let added = 0;
+        for (const en of incoming) {
+          if (en && typeof en.date === 'string' && typeof en.weight === 'number'
+              && en.weight >= 30 && en.weight <= 300 && !isSaturday(en.date)) {
+            map[en.date] = en.weight;
+            added++;
+          }
+        }
+        const merged = Object.keys(map).sort().map(d => ({ date: d, weight: map[d] }));
+        save({ entries: merged });
+        render();
+        showMsg('success', `יובאו ${added} רשומות בהצלחה`);
+      } catch (err) {
+        showMsg('error', 'קובץ לא תקין');
+      }
+      event.target.value = ''; // allow re-importing same file
+    };
+    reader.readAsText(file);
+  }
+
+  // ── Render: current week ──────────────────────────────────────
+
+  function renderCurrentWeek() {
+    const card    = document.getElementById('current-week-card');
+    const today   = todayStr();
+    const ws      = getWeekStart(today);
+    const data    = load();
+    const wmap    = byWeek(data.entries);
+    const entries = wmap[ws] || [];
+    const weekAvg = avg(entries);
+    const todayDow = dayOfWeek(today); // 0-6, but today is never Sat
+    const fri      = isFriday(today);
+
+    let html = `<div class="card-title">השבוע הנוכחי</div>`;
+    html += `<div class="week-header">`;
+
+    if (weekAvg !== null) {
+      html += `
+        <div>
+          <div class="week-avg-big">${weekAvg.toFixed(1)}<span class="unit">ק״ג</span></div>
+          <div class="week-status">${fri ? `ממוצע שבועי סופי` : `ממוצע זמני`} · ${entries.length} ${entries.length === 1 ? 'יום' : 'ימים'}</div>
+        </div>
+        <div class="week-badge ${fri ? 'final' : ''}">${formatWeekRange(ws)}</div>`;
+    } else {
+      html += `
+        <div>
+          <div class="empty-week">טרם הוזן משקל השבוע</div>
+        </div>
+        <div class="week-badge">${formatWeekRange(ws)}</div>`;
+    }
+
+    html += `</div>`;
+
+    // 6 day dots: Sun–Fri
+    html += `<div class="days-row">`;
+    for (let i = 0; i < 6; i++) {
+      const ds      = addDays(ws, i);
+      const entry   = entries.find(e => e.date === ds);
+      const isToday = ds === today;
+      const isFuture = i > todayDow;
+
+      let dotClass, dotContent;
+      if (entry) {
+        dotClass   = 'logged';
+        dotContent = '✓';
+      } else if (isToday) {
+        dotClass   = 'today-empty';
+        dotContent = DAY_LETTERS[i];
+      } else if (isFuture) {
+        dotClass   = 'future';
+        dotContent = DAY_LETTERS[i];
+      } else {
+        dotClass   = 'past-empty';
+        dotContent = '–';
+      }
+
+      html += `
+        <div class="day-item">
+          <div class="day-dot ${dotClass}" ${entry ? `onclick="if(confirm('למחוק הזנה של ${entry.weight} ק״ג ל-${formatShort(ds)}?')) deleteEntry('${ds}')"` : ''} style="${entry ? 'cursor:pointer' : ''}">
+            ${dotContent}
+          </div>
+          <div class="day-label">${DAY_LETTERS[i]}</div>
+          ${entry ? `<div class="day-weight">${entry.weight}</div>` : ''}
+        </div>`;
+    }
+    html += `</div>`;
+
+    card.innerHTML = html;
+  }
+
+  // ── Render: history ───────────────────────────────────────────
+
+  function renderHistory() {
+    const data    = load();
+    const today   = todayStr();
+    const curWs   = getWeekStart(today);
+    const wmap    = byWeek(data.entries);
+
+    const pastWeeks = Object.keys(wmap)
+      .filter(ws => ws < curWs)
+      .sort((a, b) => b.localeCompare(a)); // newest first
+
+    const historyContent = document.getElementById('history-content');
+
+    if (!pastWeeks.length) {
+      historyContent.innerHTML = `<div class="empty-history">ההיסטוריה תופיע כאן לאחר סיום השבוע הראשון</div>`;
+      return;
+    }
+
+    // Build rows
+    let html = `<div class="history-list">`;
+    const chartData = [];
+
+    pastWeeks.forEach((ws, idx) => {
+      const entries = wmap[ws];
+      const weekAvg = avg(entries);
+      chartData.unshift({ label: formatShort(ws), val: weekAvg });
+
+      // Delta vs previous week (idx+1 is older)
+      let deltaHtml = '';
+      if (idx + 1 < pastWeeks.length) {
+        const prevAvg = avg(wmap[pastWeeks[idx + 1]]);
+        const diff = weekAvg - prevAvg;
+        if (Math.abs(diff) < 0.05) {
+          deltaHtml = `<span class="history-delta flat">—</span>`;
+        } else if (diff < 0) {
+          deltaHtml = `<span class="history-delta down">▼ ${Math.abs(diff).toFixed(1)}</span>`;
+        } else {
+          deltaHtml = `<span class="history-delta up">▲ ${diff.toFixed(1)}</span>`;
+        }
+      }
+
+      const isOpen = openWeeks.has(ws);
+
+      html += `
+        <div class="history-week">
+          <div class="history-row" onclick="toggleWeek('${ws}')">
+            <div>
+              <div class="history-week-label">
+                <span class="chevron ${isOpen ? 'open' : ''}">▶</span>
+                ${formatWeekRange(ws)}
+              </div>
+              <div class="history-days-label">${entries.length} ימים מתוך 6</div>
+            </div>
+            <div class="history-right">
+              ${deltaHtml}
+              <div class="history-avg-val">${weekAvg.toFixed(1)} ק״ג</div>
+            </div>
+          </div>
+          <div class="week-detail ${isOpen ? 'open' : ''}">
+            ${renderWeekDetail(ws)}
+          </div>
+        </div>`;
+    });
+
+    html += `</div>`;
+
+    // Chart
+    if (chartData.length >= 2) {
+      html += renderLineChart(chartData);
+    }
+
+    historyContent.innerHTML = html;
+  }
+
+  // Detail rows for a past week — 6 days, each editable / deletable
+  function renderWeekDetail(ws) {
+    const data = load();
+    let html = '';
+    for (let i = 0; i < 6; i++) {
+      const ds    = addDays(ws, i);
+      const entry = data.entries.find(e => e.date === ds);
+      const inputId = `edit-${ds}`;
+      html += `
+        <div class="detail-day">
+          <div class="detail-day-label">${DAY_LETTERS[i]} · ${formatShort(ds)}</div>
+          <div class="detail-day-right">
+            <input type="number" id="${inputId}" class="detail-edit-input"
+                   step="0.1" min="30" max="300"
+                   placeholder="—" value="${entry ? entry.weight : ''}"
+                   onclick="event.stopPropagation()">
+            <button class="mini-btn save" onclick="event.stopPropagation();saveEditEntry('${ds}')">שמור</button>
+            ${entry ? `<button class="mini-btn del" onclick="event.stopPropagation();deleteEntry('${ds}')">מחק</button>` : ''}
+          </div>
+        </div>`;
+    }
+    return html;
+  }
+
+  function toggleWeek(ws) {
+    if (openWeeks.has(ws)) openWeeks.delete(ws);
+    else openWeeks.add(ws);
+    renderHistory();
+  }
+
+  function saveEditEntry(date) {
+    const el = document.getElementById('edit-' + date);
+    const val = parseFloat(el.value);
+    if (isNaN(val) || val < 30 || val > 300) {
+      el.style.borderColor = '#ef4444';
+      return;
+    }
+    const data = load();
+    const idx = data.entries.findIndex(e => e.date === date);
+    if (idx >= 0) data.entries[idx].weight = val;
+    else {
+      data.entries.push({ date, weight: val });
+      data.entries.sort((a, b) => a.date.localeCompare(b.date));
+    }
+    save(data);
+    render();
+  }
+
+  // ── Mini SVG line chart ───────────────────────────────────────
+
+  function renderLineChart(data) {
+    const W = 400, H = 130, PL = 38, PR = 12, PT = 10, PB = 22;
+    const vals = data.map(d => d.val);
+    const minV = Math.min(...vals);
+    const maxV = Math.max(...vals);
+    const range = (maxV - minV) || 1;
+
+    const innerW = W - PL - PR;
+    const innerH = H - PT - PB;
+
+    const toX = i => PL + (i / (data.length - 1)) * innerW;
+    const toY = v => PT + (1 - (v - minV) / range) * innerH;
+
+    const pts = data.map((d, i) => ({ x: toX(i), y: toY(d.val), label: d.label, val: d.val }));
+    const pathD = pts.map((p, i) => `${i === 0 ? 'M' : 'L'}${p.x.toFixed(1)},${p.y.toFixed(1)}`).join(' ');
+
+    // Y axis labels (3 ticks)
+    let yTicks = '';
+    for (let t = 0; t <= 2; t++) {
+      const v = minV + (t / 2) * range;
+      const y = toY(v);
+      yTicks += `
+        <line x1="${PL}" y1="${y.toFixed(1)}" x2="${W - PR}" y2="${y.toFixed(1)}" stroke="#f1f5f9" stroke-width="1"/>
+        <text x="${PL - 4}" y="${(y + 4).toFixed(1)}" text-anchor="end" font-size="9" fill="#94a3b8">${v.toFixed(1)}</text>`;
+    }
+
+    let circles = pts.map(p =>
+      `<circle cx="${p.x.toFixed(1)}" cy="${p.y.toFixed(1)}" r="3.5" fill="#3b82f6"/>`
+    ).join('');
+
+    let xLabels = pts.map(p =>
+      `<text x="${p.x.toFixed(1)}" y="${H - 4}" text-anchor="middle" font-size="9" fill="#94a3b8">${p.label}</text>`
+    ).join('');
+
+    return `
+      <div class="chart-wrap" style="margin-top:16px;padding-top:8px;border-top:1px solid #f1f5f9">
+        <svg viewBox="0 0 ${W} ${H}" width="100%" style="display:block">
+          ${yTicks}
+          <path d="${pathD}" fill="none" stroke="#bfdbfe" stroke-width="1.5" stroke-dasharray="none"/>
+          <path d="${pathD}" fill="none" stroke="#3b82f6" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>
+          ${circles}
+          ${xLabels}
+        </svg>
+      </div>`;
+  }
+
+  // ── Init ──────────────────────────────────────────────────────
+
+  function render() {
+    renderCurrentWeek();
+    renderHistory();
+  }
+
+  const dateInput = document.getElementById('date-input');
+  dateInput.value = todayStr();
+  dateInput.max   = todayStr();
+
+  dateInput.addEventListener('change', function () {
+    if (this.value && isSaturday(this.value)) {
+      showMsg('error', 'שבת — בחר יום אחר');
+      this.value = '';
+    } else {
+      document.getElementById('msg').textContent = '';
+    }
+  });
+
+  render();
+</script>
+</body>
+</html>

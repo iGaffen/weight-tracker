@@ -1,0 +1,11 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "weight-tracker",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["serve", "-p", "3333", "C:\\Users\\avimo\\Claude\\weight-tracker"],
+      "port": 3333
+    }
+  ]
+}
