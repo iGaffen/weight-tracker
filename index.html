@@ -595,6 +595,45 @@
       padding: 8px 0;
       line-height: 1.6;
     }
+
+    /* Howler roast card */
+    .howler-card {
+      background: #6e1414;
+      border: 2px solid #3d0a0a;
+      color: #f6e6c5;
+      box-shadow: 0 3px 14px rgba(110,20,20,0.35);
+      animation: howler-shake 0.5s ease-in-out 1;
+    }
+    @keyframes howler-shake {
+      0%, 100% { transform: translateX(0); }
+      20% { transform: translateX(-4px) rotate(-0.4deg); }
+      40% { transform: translateX(4px) rotate(0.4deg); }
+      60% { transform: translateX(-3px); }
+      80% { transform: translateX(3px); }
+    }
+    .howler-label {
+      font-family: 'Suez One', serif;
+      font-size: 13px;
+      letter-spacing: 0.06em;
+      color: #f3c9a0;
+      margin-bottom: 10px;
+      direction: ltr;
+      text-align: left;
+    }
+    .howler-text {
+      font-size: 16px;
+      line-height: 1.65;
+      font-weight: 500;
+      direction: ltr;
+      text-align: left;
+    }
+    .howler-foot {
+      margin-top: 12px;
+      padding-top: 10px;
+      border-top: 1px solid rgba(246,230,197,0.25);
+      font-size: 12px;
+      color: #e0b48a;
+    }
   </style>
 </head>
 <body>
@@ -611,6 +650,9 @@
       <span class="pts-lbl">נקודות</span>
     </div>
   </header>
+
+  <!-- Howler roast (shown only when last finished week went up) -->
+  <div class="card howler-card" id="roast-card" style="display:none"></div>
 
   <!-- Input card -->
   <div class="card">
@@ -764,48 +806,48 @@
   const POINTS = { easy: 5, med: 10, hard: 20 };
   const LEVEL_LABEL = { easy: 'קל', med: 'בינוני', hard: 'קשה' };
   const BOOK_NAME = {
-    1: 'אבן החכמים', 2: 'חדר הסתרים', 3: 'אסיר אזקבאן', 4: 'גביע האש',
-    5: 'מסדר עוף החול', 6: 'הנסיך חצוי-הדם', 7: 'אוצרות המוות'
+    1: "the Sorcerer's Stone", 2: 'the Chamber of Secrets', 3: 'the Prisoner of Azkaban',
+    4: 'the Goblet of Fire', 5: 'the Order of the Phoenix', 6: 'the Half-Blood Prince', 7: 'the Deathly Hallows'
   };
 
   const TRIVIA = [
-    { id: 1,  level: 'easy', book: 1, q: 'כמה נקודות מזכה תפיסת הסניץ\' הזהוב?', opts: ['50', '100', '150', '200'], correct: 2 },
-    { id: 2,  level: 'easy', book: 1, q: 'באיזו כתובת גרים בני דורסלי?', opts: ['פריווט דרייב 4', 'פריווט דרייב 12', 'ספינרס אנד 4', 'גרימולד פלייס 12'], correct: 0 },
-    { id: 3,  level: 'easy', book: 1, q: 'מה שם הינשופית של הארי?', opts: ['הדוויג', 'אררולה', 'פוקס', 'נורברט'], correct: 0 },
-    { id: 4,  level: 'easy', book: 1, q: 'מי לימד הגנה מפני כוחות האופל בשנה הראשונה?', opts: ['פרופ\' קווירל', 'סוורוס סנייפ', 'גילדרוי לוקהארט', 'רמוס לופין'], correct: 0 },
-    { id: 5,  level: 'easy', book: 1, q: 'מי שומר המפתחות והשטחים של הוגוורטס?', opts: ['רוביאוס האגריד', 'ארגוס פילץ\'', 'אלבוס דמבלדור', 'מינרבה מקגונגל'], correct: 0 },
-    { id: 6,  level: 'med',  book: 1, q: 'כמה מדרגות יש בהוגוורטס?', opts: ['77', '100', '142', '200'], correct: 2 },
-    { id: 7,  level: 'med',  book: 1, q: 'מאיזה עץ עשוי שרביטו של הארי?', opts: ['עץ אֵלה (holly)', 'עץ יוּ', 'מהגוני', 'אלון'], correct: 0 },
-    { id: 8,  level: 'hard', book: 1, q: 'מה אורך שרביטו של הארי?', opts: ['9 אינץ\'', '10 אינץ\'', '11 אינץ\'', '13.5 אינץ\''], correct: 2 },
-    { id: 9,  level: 'med',  book: 1, q: 'מה שם הכלב התלת-ראשי ששמר על אבן החכמים?', opts: ['פלאפי', 'פאנג', 'נורברט', 'פוקס'], correct: 0 },
-    { id: 10, level: 'hard', book: 1, q: 'מיהו היוצר היחיד הידוע של אבן החכמים?', opts: ['ניקולא פלאמל', 'אלבוס דמבלדור', 'גלרט גרינדלוולד', 'ניקולא פרנל'], correct: 0 },
-    { id: 11, level: 'easy', book: 2, q: 'באיזה בית בהוגוורטס היה טום רידל (וולדמורט)?', opts: ['סלית\'רין', 'גריפינדור', 'רייבנקלו', 'הפלפאף'], correct: 0 },
-    { id: 12, level: 'easy', book: 2, q: 'מה שם רוח הרפאים שרודפת בשירותי הבנות?', opts: ['מירטל המייללת', 'ניק כמעט-עריף-ראש', 'הברון העקוב מדם', 'הנזיר השמן'], correct: 0 },
-    { id: 13, level: 'med',  book: 2, q: 'מה שמו המלא של טום רידל?', opts: ['טום מארוולו רידל', 'טום אלביוס רידל', 'טום סלית\'רין רידל', 'טום וולפריק רידל'], correct: 0 },
-    { id: 14, level: 'med',  book: 2, q: 'איזה יצור חי בחדר הסתרים?', opts: ['בזיליסק', 'אקרומנטולה', 'היפוגריף', 'דרקון'], correct: 0 },
-    { id: 15, level: 'hard', book: 2, q: 'מהו ההורקרוקס הראשון של וולדמורט שהושמד?', opts: ['היומן', 'הטבעת', 'המדליון', 'הגביע'], correct: 0 },
-    { id: 16, level: 'med',  book: 2, q: 'באיזה תחום עובד ארתור ויזלי במשרד הקסמים?', opts: ['שימוש לרעה בחפצי מאגלים', 'משחקי ספורט וקסם', 'תחבורה קסומה', 'אכיפת חוק הקסמים'], correct: 0 },
-    { id: 17, level: 'easy', book: 3, q: 'מה שם חתולה של הרמיוני?', opts: ['קרוקשאנקס', 'קרוקס', 'גברת נוריס', 'פאנג'], correct: 0 },
-    { id: 18, level: 'easy', book: 3, q: 'מה שם העכבר של רון (שהתגלה כפיטר פטיגרו)?', opts: ['סקאברס', 'פיגוויג\'', 'נורברט', 'ריפר'], correct: 0 },
-    { id: 19, level: 'med',  book: 3, q: 'לְמה הופך פרופ\' לופין בלילות ירח מלא?', opts: ['זאב אדם', 'ערפד', 'חתול', 'דמנטור'], correct: 0 },
-    { id: 20, level: 'med',  book: 3, q: 'מה צורת הפטרונוס של הארי?', opts: ['אייל', 'לוטרה', 'איילה', 'כלב'], correct: 0 },
-    { id: 21, level: 'easy', book: 3, q: 'מה שם האוטובוס הקסום שהארי עולה עליו?', opts: ['אוטובוס האביר', 'אקספרס הוגוורטס', 'רכבת הלילה', 'הנודד הסגול'], correct: 0 },
-    { id: 22, level: 'hard', book: 3, q: 'מה היה כינויו של ג\'יימס פוטר בקרב ה"שודדים"?', opts: ['פרונגס', 'פדפוט', 'מוּני', 'וורמטייל'], correct: 0 },
-    { id: 23, level: 'easy', book: 4, q: 'מהי הקללה ההורגת?', opts: ['אוודה קדברה', 'קרוקיו', 'אימפריו', 'אקספלירמוס'], correct: 0 },
-    { id: 24, level: 'med',  book: 4, q: 'כמה בתי-ספר לקסמים התחרו בטורניר שלושת הקוסמים?', opts: ['שניים', 'שלושה', 'ארבעה', 'חמישה'], correct: 1 },
-    { id: 25, level: 'med',  book: 4, q: 'איזו קללה בלתי-נסלחת משתלטת על רצון הקורבן?', opts: ['קללת אימפריוס', 'קללת קרוקיאטוס', 'אוודה קדברה', 'סקטומסמפרה'], correct: 0 },
-    { id: 26, level: 'easy', book: 5, q: 'מה שם ארגון ההתנגדות החשאי שהקים דמבלדור?', opts: ['מסדר עוף החול', 'גדוד דמבלדור', 'אוכלי המוות', 'המיניסטריון'], correct: 0 },
-    { id: 27, level: 'med',  book: 5, q: 'מה צורת הפטרונוס של הרמיוני?', opts: ['לוטרה', 'אייל', 'חתול', 'ציפור'], correct: 0 },
-    { id: 28, level: 'med',  book: 5, q: 'מי הציקה לתלמידים כ"מפקחת עליונה" מטעם המשרד?', opts: ['דולורס אמברידג\'', 'ריטה סקיטר', 'נרקיסה מאלפוי', 'בלטריקס לסטריינג\''], correct: 0 },
-    { id: 29, level: 'med',  book: 5, q: 'מה השם שבו כינו התלמידים את קבוצת ההגנה הסודית של הארי?', opts: ['גדוד דמבלדור', 'מסדר עוף החול', 'החזית', 'שומרי הוגוורטס'], correct: 0 },
-    { id: 30, level: 'easy', book: 6, q: 'מי הרג את אלבוס דמבלדור?', opts: ['סוורוס סנייפ', 'דרקו מאלפוי', 'לורד וולדמורט', 'בלטריקס לסטריינג\''], correct: 0 },
-    { id: 31, level: 'med',  book: 6, q: 'מה שם השיקוי שמעניק מזל מושלם ליום שלם?', opts: ['פליקס פליציס', 'אמורטנטיה', 'שיקוי הריבוי', 'וריטסרום'], correct: 0 },
-    { id: 32, level: 'med',  book: 6, q: 'לכמה הורקרוקסים תכנן וולדמורט לפצל את נשמתו?', opts: ['שלושה', 'חמישה', 'שישה', 'שבעה'], correct: 2 },
-    { id: 33, level: 'hard', book: 6, q: 'מה שמה של אמו של וולדמורט?', opts: ['מֵרופ גאונט', 'בלטריקס לסטריינג\'', 'אריאנה דמבלדור', 'אילין פרינס'], correct: 0 },
-    { id: 34, level: 'easy', book: 7, q: 'איזה מאוצרות המוות הופך את נושאו לבלתי-נראה?', opts: ['גלימת ההיעלמות', 'אבן התחייה', 'שרביט הסמבוק', 'מפת השודדים'], correct: 0 },
-    { id: 35, level: 'med',  book: 7, q: 'מה צורת הפטרונוס של סוורוס סנייפ?', opts: ['איילה', 'אייל', 'לוטרה', 'עוף החול'], correct: 0 },
-    { id: 36, level: 'hard', book: 7, q: 'מה שמו המלא של אלבוס דמבלדור?', opts: ['אלבוס פרסיבל וולפריק בריאן דמבלדור', 'אלבוס וולפריק בריאן דמבלדור', 'אלבוס פרסיבל בריאן דמבלדור', 'אלבוס בריאן פרסיבל וולפריק דמבלדור'], correct: 0 },
-    { id: 37, level: 'med',  book: 7, q: 'מה חרוט על מצבתו של דובי?', opts: ['כאן שוכן דובי, שדון חופשי', 'לזכר דובי הנאמן', 'דובי, קוסם חופשי', 'כאן נח שדון אמיץ'], correct: 0 }
+    { id: 1,  level: 'easy', book: 1, q: 'How many points is catching the Golden Snitch worth?', opts: ['50', '100', '150', '200'], correct: 2 },
+    { id: 2,  level: 'easy', book: 1, q: "What is the Dursleys' street address?", opts: ['Number 4, Privet Drive', 'Number 12, Privet Drive', "Number 4, Spinner's End", 'Number 12, Grimmauld Place'], correct: 0 },
+    { id: 3,  level: 'easy', book: 1, q: "What is the name of Harry's owl?", opts: ['Hedwig', 'Errol', 'Fawkes', 'Norbert'], correct: 0 },
+    { id: 4,  level: 'easy', book: 1, q: 'Who taught Defence Against the Dark Arts in Harry\'s first year?', opts: ['Professor Quirrell', 'Severus Snape', 'Gilderoy Lockhart', 'Remus Lupin'], correct: 0 },
+    { id: 5,  level: 'easy', book: 1, q: 'Who is the Keeper of Keys and Grounds at Hogwarts?', opts: ['Rubeus Hagrid', 'Argus Filch', 'Albus Dumbledore', 'Minerva McGonagall'], correct: 0 },
+    { id: 6,  level: 'med',  book: 1, q: 'How many staircases are there at Hogwarts?', opts: ['77', '100', '142', '200'], correct: 2 },
+    { id: 7,  level: 'med',  book: 1, q: "What wood is Harry's wand made of?", opts: ['Holly', 'Yew', 'Mahogany', 'Oak'], correct: 0 },
+    { id: 8,  level: 'hard', book: 1, q: "How long is Harry's wand?", opts: ['9 inches', '10 inches', '11 inches', '13½ inches'], correct: 2 },
+    { id: 9,  level: 'med',  book: 1, q: 'What is the name of the three-headed dog guarding the Stone?', opts: ['Fluffy', 'Fang', 'Norbert', 'Fawkes'], correct: 0 },
+    { id: 10, level: 'hard', book: 1, q: "Who is the only known maker of the Sorcerer's Stone?", opts: ['Nicolas Flamel', 'Albus Dumbledore', 'Gellert Grindelwald', 'Perenelle Flamel'], correct: 0 },
+    { id: 11, level: 'easy', book: 2, q: 'Which Hogwarts house was Tom Riddle (Voldemort) in?', opts: ['Slytherin', 'Gryffindor', 'Ravenclaw', 'Hufflepuff'], correct: 0 },
+    { id: 12, level: 'easy', book: 2, q: "What is the name of the ghost who haunts the girls' bathroom?", opts: ['Moaning Myrtle', 'Nearly Headless Nick', 'The Bloody Baron', 'The Fat Friar'], correct: 0 },
+    { id: 13, level: 'med',  book: 2, q: "What is Tom Riddle's full name?", opts: ['Tom Marvolo Riddle', 'Tom Aurelius Riddle', 'Tom Salazar Riddle', 'Tom Wulfric Riddle'], correct: 0 },
+    { id: 14, level: 'med',  book: 2, q: 'What creature lives in the Chamber of Secrets?', opts: ['A basilisk', 'An Acromantula', 'A Hippogriff', 'A dragon'], correct: 0 },
+    { id: 15, level: 'hard', book: 2, q: "Which of Voldemort's Horcruxes was destroyed first?", opts: ['The diary', 'The ring', 'The locket', 'The cup'], correct: 0 },
+    { id: 16, level: 'med',  book: 2, q: 'Which Ministry department does Arthur Weasley work in?', opts: ['Misuse of Muggle Artefacts', 'Magical Games and Sports', 'Magical Transportation', 'Magical Law Enforcement'], correct: 0 },
+    { id: 17, level: 'easy', book: 3, q: "What is the name of Hermione's cat?", opts: ['Crookshanks', 'Crux', 'Mrs. Norris', 'Fang'], correct: 0 },
+    { id: 18, level: 'easy', book: 3, q: "What is the name of Ron's rat (secretly Peter Pettigrew)?", opts: ['Scabbers', 'Pigwidgeon', 'Norbert', 'Ripper'], correct: 0 },
+    { id: 19, level: 'med',  book: 3, q: 'What does Professor Lupin turn into on full-moon nights?', opts: ['A werewolf', 'A vampire', 'A cat', 'A Dementor'], correct: 0 },
+    { id: 20, level: 'med',  book: 3, q: "What form does Harry's Patronus take?", opts: ['A stag', 'An otter', 'A doe', 'A dog'], correct: 0 },
+    { id: 21, level: 'easy', book: 3, q: 'What is the name of the magical bus Harry rides?', opts: ['The Knight Bus', 'The Hogwarts Express', 'The Night Train', 'The Purple Wanderer'], correct: 0 },
+    { id: 22, level: 'hard', book: 3, q: "What was James Potter's Marauder nickname?", opts: ['Prongs', 'Padfoot', 'Moony', 'Wormtail'], correct: 0 },
+    { id: 23, level: 'easy', book: 4, q: 'What is the Killing Curse?', opts: ['Avada Kedavra', 'Crucio', 'Imperio', 'Expelliarmus'], correct: 0 },
+    { id: 24, level: 'med',  book: 4, q: 'How many schools competed in the Triwizard Tournament?', opts: ['Two', 'Three', 'Four', 'Five'], correct: 1 },
+    { id: 25, level: 'med',  book: 4, q: "Which Unforgivable Curse controls the victim's will?", opts: ['The Imperius Curse', 'The Cruciatus Curse', 'Avada Kedavra', 'Sectumsempra'], correct: 0 },
+    { id: 26, level: 'easy', book: 5, q: 'What is the name of the secret resistance group Dumbledore founded?', opts: ['The Order of the Phoenix', "Dumbledore's Army", 'The Death Eaters', 'The Ministry'], correct: 0 },
+    { id: 27, level: 'med',  book: 5, q: "What form does Hermione's Patronus take?", opts: ['An otter', 'A stag', 'A cat', 'A bird'], correct: 0 },
+    { id: 28, level: 'med',  book: 5, q: "Who tormented students as 'High Inquisitor' for the Ministry?", opts: ['Dolores Umbridge', 'Rita Skeeter', 'Narcissa Malfoy', 'Bellatrix Lestrange'], correct: 0 },
+    { id: 29, level: 'med',  book: 5, q: "What did students nickname Harry's secret defence group?", opts: ["Dumbledore's Army", 'The Order of the Phoenix', 'The Front', 'The Hogwarts Guard'], correct: 0 },
+    { id: 30, level: 'easy', book: 6, q: 'Who killed Albus Dumbledore?', opts: ['Severus Snape', 'Draco Malfoy', 'Lord Voldemort', 'Bellatrix Lestrange'], correct: 0 },
+    { id: 31, level: 'med',  book: 6, q: 'What potion grants perfect luck for a day?', opts: ['Felix Felicis', 'Amortentia', 'Polyjuice Potion', 'Veritaserum'], correct: 0 },
+    { id: 32, level: 'med',  book: 6, q: 'Into how many Horcruxes did Voldemort intend to split his soul?', opts: ['Three', 'Five', 'Six', 'Seven'], correct: 2 },
+    { id: 33, level: 'hard', book: 6, q: "What is the name of Voldemort's mother?", opts: ['Merope Gaunt', 'Bellatrix Lestrange', 'Ariana Dumbledore', 'Eileen Prince'], correct: 0 },
+    { id: 34, level: 'easy', book: 7, q: 'Which of the Deathly Hallows makes the bearer invisible?', opts: ['The Cloak of Invisibility', 'The Resurrection Stone', 'The Elder Wand', "The Marauder's Map"], correct: 0 },
+    { id: 35, level: 'med',  book: 7, q: "What form does Severus Snape's Patronus take?", opts: ['A doe', 'A stag', 'An otter', 'A phoenix'], correct: 0 },
+    { id: 36, level: 'hard', book: 7, q: "What is Albus Dumbledore's full name?", opts: ['Albus Percival Wulfric Brian Dumbledore', 'Albus Wulfric Brian Dumbledore', 'Albus Percival Brian Dumbledore', 'Albus Brian Percival Wulfric Dumbledore'], correct: 0 },
+    { id: 37, level: 'med',  book: 7, q: "What is engraved on Dobby's gravestone?", opts: ['Here lies Dobby, a free elf', 'In memory of loyal Dobby', 'Dobby, a free wizard', 'Here rests a brave elf'], correct: 0 }
   ];
 
   function daysSince(dateStr) {
@@ -870,14 +912,64 @@
     if (ans) {
       if (ans.correct) {
         html += `<div class="trivia-result win">נכון! זכית ב-${ans.pts} נקודות לבית סלית'רין 🐍
-                 <span class="src">מתוך: הארי פוטר ו${BOOK_NAME[q.book]}</span></div>`;
+                 <span class="src">From: Harry Potter and ${BOOK_NAME[q.book]}</span></div>`;
       } else {
         html += `<div class="trivia-result lose">לא הפעם. התשובה הנכונה מסומנת למעלה.
-                 <span class="src">מתוך: הארי פוטר ו${BOOK_NAME[q.book]} · נסה שוב מחר!</span></div>`;
+                 <span class="src">From: Harry Potter and ${BOOK_NAME[q.book]} · נסה שוב מחר!</span></div>`;
       }
     }
 
     card.innerHTML = html;
+    card.style.display = 'block';
+  }
+
+  // ── Howler roast (only when the latest finished week went UP) ──
+  // {g} is replaced with the actual weekly gain in kg.
+
+  const ROASTS = [
+    "You gained {g} kg this week. Voldemort split his soul into seven pieces to cheat death. You split your dinner into seven meals a day to cheat your diet. Both plans backfired spectacularly.",
+    "{g} kg heavier. The Sorting Hat looked into your mind this week, found nothing but snack cravings, and muttered: 'Well... at least he's consistent.'",
+    "Up {g} kg. A Dementor drains every happy memory from a person. Your weight does the same to your old photos — one by one, they stop being good.",
+    "You gained {g} kg. The Golden Snitch is hard to catch because it flies 150 miles an hour. Your goals are hard to catch because you refuse to move at all. Same result, opposite reason.",
+    "{g} kg up. Azkaban is guarded by Dementors so that no one ever escapes. Your fridge is guarded by absolutely no one — and that, clearly, is the entire problem.",
+    "Heavier by {g} kg. 'I'll start seriously this week,' you announced — with all the confidence of Gilderoy Lockhart and precisely the same amount of follow-through.",
+    "You gained {g} kg. The Mirror of Erised shows your deepest desire. You stood before it, and it simply displayed a takeaway menu. Even ancient magic has given up on you.",
+    "Up {g} kg. You committed to gaining weight with a devotion you have never shown anything else. Aim that focus at real magic and you'd run Hogwarts. Instead you run a snack cupboard.",
+    "{g} kg gained. Hagrid hid a dragon in a wooden hut and insisted everything was fine. You're hiding one under your shirt using the exact same excuse.",
+    "You're {g} kg heavier. A Time-Turner let Hermione relive her week to achieve more. You'd only use yours to revisit the buffet.",
+    "Gained {g} kg. They say 'Wingardium Leviosa' lifts objects into the air. Congratulations — this week the only thing that rose was you.",
+    "{g} kg up. Nicolas Flamel brewed a stone granting eternal life. You've brewed a habit granting eternal second helpings. Only one of you will be remembered fondly.",
+    "Heavier by {g} kg. The Whomping Willow attacks anything that comes near it. Your willpower attacks nothing — least of all the cake.",
+    "You gained {g} kg. Snape spent years mastering self-control and silent discipline. You spent the week mastering the midnight fridge raid.",
+    "{g} kg this week. Polyjuice Potion lets you take another person's form for one hour. You took a larger form for free, and it is lasting considerably longer than an hour.",
+    "Up {g} kg. The Goblet of Fire chooses worthy champions. If it judged by appetite alone, you'd have won the Triwizard Tournament three times over.",
+    "Gained {g} kg. Dumbledore warned that men have wasted away before the Mirror of Erised. You found a way to do the precise opposite — and somehow that is worse.",
+    "{g} kg heavier. Buckbeak only attacks those who insult him. Your scale just insulted you to your face, and you let it happen without a fight.",
+    "You gained {g} kg. Voldemort feared only one thing: death. You fear only one thing: an empty plate. He, at least, had the decency to be ambitious about it.",
+    "Up {g} kg. The Room of Requirement becomes whatever you truly need. You walked in, and it turned into a pantry. The castle knows you better than you know yourself."
+  ];
+
+  function renderRoast() {
+    const card = document.getElementById('roast-card');
+    const data = load();
+    const wmap = byWeek(data.entries);
+    const weeks = Object.keys(wmap).sort();              // ascending
+    const curWS = getWeekStart(todayStr());
+    const completed = weeks.filter(w => w < curWS);      // only finished weeks
+    if (completed.length < 2) { card.style.display = 'none'; return; }
+
+    const latest = completed[completed.length - 1];
+    const prev   = completed[completed.length - 2];
+    const a = avg(wmap[latest]), p = avg(wmap[prev]);
+    if (a === null || p === null || a <= p) { card.style.display = 'none'; return; }
+
+    const gain  = (a - p).toFixed(1);
+    const roast = ROASTS[((daysSince(latest) % ROASTS.length) + ROASTS.length) % ROASTS.length].replace('{g}', gain);
+
+    card.innerHTML = `
+      <div class="howler-label">🔴 A Howler from Hogwarts</div>
+      <div class="howler-text">${roast}</div>
+      <div class="howler-foot">שבוע ${formatWeekRange(latest)} · עלייה של ${gain} ק"ג מהשבוע הקודם</div>`;
     card.style.display = 'block';
   }
 
@@ -1377,6 +1469,7 @@
     renderCurrentWeek();
     renderHistory();
     renderTrivia();
+    renderRoast();
     updatePointsDisplay();
   }
 
