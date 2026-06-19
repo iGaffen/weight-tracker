@@ -953,23 +953,26 @@
     const card = document.getElementById('roast-card');
     const data = load();
     const wmap = byWeek(data.entries);
-    const weeks = Object.keys(wmap).sort();              // ascending
-    const curWS = getWeekStart(todayStr());
-    const completed = weeks.filter(w => w < curWS);      // only finished weeks
-    if (completed.length < 2) { card.style.display = 'none'; return; }
+    const weeks = Object.keys(wmap).sort();              // ascending, weeks with data
+    if (weeks.length < 2) { card.style.display = 'none'; return; }
 
-    const latest = completed[completed.length - 1];
-    const prev   = completed[completed.length - 2];
+    // Compare the latest week that has data (current week included) to the one before it
+    const latest = weeks[weeks.length - 1];
+    const prev   = weeks[weeks.length - 2];
     const a = avg(wmap[latest]), p = avg(wmap[prev]);
     if (a === null || p === null || a <= p) { card.style.display = 'none'; return; }
 
-    const gain  = (a - p).toFixed(1);
-    const roast = ROASTS[((daysSince(latest) % ROASTS.length) + ROASTS.length) % ROASTS.length].replace('{g}', gain);
+    const gain     = (a - p).toFixed(1);
+    const isCurrent = latest === getWeekStart(todayStr());
+    const roast    = ROASTS[((daysSince(latest) % ROASTS.length) + ROASTS.length) % ROASTS.length].replace('{g}', gain);
+    const foot     = isCurrent
+      ? `השבוע (עד כה) ${formatWeekRange(latest)} · ${gain} ק"ג מעל ממוצע השבוע הקודם`
+      : `שבוע ${formatWeekRange(latest)} · עלייה של ${gain} ק"ג מהשבוע הקודם`;
 
     card.innerHTML = `
       <div class="howler-label">🔴 A Howler from Hogwarts</div>
       <div class="howler-text">${roast}</div>
-      <div class="howler-foot">שבוע ${formatWeekRange(latest)} · עלייה של ${gain} ק"ג מהשבוע הקודם</div>`;
+      <div class="howler-foot">${foot}</div>`;
     card.style.display = 'block';
   }
 
