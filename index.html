@@ -398,6 +398,63 @@
       margin-top: 10px;
       line-height: 1.5;
     }
+
+    /* GitHub sync section */
+    .gh-section {
+      margin-top: 18px;
+      padding-top: 16px;
+      border-top: 1px solid #f1f5f9;
+    }
+
+    .gh-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .gh-title { font-size: 13px; font-weight: 700; color: #334155; }
+
+    .gh-badge {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 9px;
+      border-radius: 20px;
+      background: #f1f5f9;
+      color: #94a3b8;
+    }
+    .gh-badge.connected { background: #dcfce7; color: #16a34a; }
+
+    .btn-backup.gh { background: #eff6ff; border-color: #bfdbfe; color: #1d4ed8; }
+    .btn-backup.gh:hover { background: #dbeafe; border-color: #93c5fd; }
+    .btn-backup.gh:disabled { opacity: 0.45; cursor: not-allowed; }
+
+    .gh-token-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .gh-token-input {
+      flex: 1;
+      padding: 9px 11px;
+      border: 1.5px solid #e2e8f0;
+      border-radius: 8px;
+      font-size: 13px;
+      font-family: inherit;
+      direction: ltr;
+    }
+    .gh-token-input:focus { border-color: #3b82f6; outline: none; }
+
+    .gh-msg {
+      font-size: 12px;
+      margin-top: 10px;
+      line-height: 1.5;
+      display: none;
+    }
+    .gh-msg.show { display: block; }
+    .gh-msg.ok   { color: #16a34a; }
+    .gh-msg.err  { color: #dc2626; }
+    .gh-msg.info { color: #64748b; }
   </style>
 </head>
 <body>
@@ -445,6 +502,30 @@
     <div class="backup-hint">
       המידע נשמר אוטומטית בדפדפן של מכשיר זה.<br>
       מומלץ לייצא קובץ גיבוי מדי פעם — כדי לא לאבד נתונים אם הדפדפן מתנקה, וכדי להעביר בין מכשירים.
+    </div>
+
+    <div class="gh-section">
+      <div class="gh-header">
+        <span class="gh-title">☁️ סנכרון עם גיטהאב</span>
+        <span id="gh-status-badge" class="gh-badge">לא מחובר</span>
+      </div>
+
+      <div class="backup-row" style="margin-top:10px">
+        <button class="btn-backup gh" onclick="pushToGitHub()">☁️ גבה לגיטהאב</button>
+        <button class="btn-backup gh" onclick="pullFromGitHub()">⬇️ שחזר מגיטהאב</button>
+      </div>
+
+      <div id="gh-token-area">
+        <div class="backup-hint" style="margin-top:12px">
+          כדי להפעיל סנכרון, הדבק כאן Token של גיטהאב (נשמר רק בדפדפן הזה, לא נשלח לאף אחד מלבד גיטהאב):
+        </div>
+        <div class="gh-token-row">
+          <input type="password" id="gh-token-input" class="gh-token-input" placeholder="github_pat_..." autocomplete="off">
+          <button class="mini-btn save" onclick="saveToken()">שמור</button>
+        </div>
+      </div>
+
+      <div id="gh-msg" class="gh-msg"></div>
     </div>
   </div>
 
@@ -629,6 +710,138 @@
       event.target.value = ''; // allow re-importing same file
     };
     reader.readAsText(file);
+  }
+
+  // ── GitHub sync ───────────────────────────────────────────────
+  // Commits the data to backups/weight-backup.json in the repo via the
+  // GitHub Contents API. The token lives only in this browser's localStorage.
+
+  const GH_OWNER  = 'iGaffen';
+  const GH_REPO   = 'weight-tracker';
+  const GH_PATH   = 'backups/weight-backup.json';
+  const GH_BRANCH = 'main';
+  const GH_TOKEN_KEY = 'wt_gh_token';
+
+  function ghToken() { return localStorage.getItem(GH_TOKEN_KEY) || ''; }
+
+  function ghMsg(kind, text) {
+    const el = document.getElementById('gh-msg');
+    el.className = 'gh-msg show ' + kind;
+    el.textContent = text;
+  }
+
+  function refreshGhUI() {
+    const has = !!ghToken();
+    document.getElementById('gh-status-badge').textContent = has ? 'מחובר ✓' : 'לא מחובר';
+    document.getElementById('gh-status-badge').className = 'gh-badge' + (has ? ' connected' : '');
+    document.getElementById('gh-token-area').style.display = has ? 'none' : 'block';
+  }
+
+  function saveToken() {
+    const val = document.getElementById('gh-token-input').value.trim();
+    if (!val) { ghMsg('err', 'הדבק קודם token'); return; }
+    localStorage.setItem(GH_TOKEN_KEY, val);
+    document.getElementById('gh-token-input').value = '';
+    refreshGhUI();
+    ghMsg('ok', 'ה-token נשמר. אפשר לגבות לגיטהאב.');
+  }
+
+  // UTF-8 safe base64
+  function b64encode(str) { return btoa(unescape(encodeURIComponent(str))); }
+  function b64decode(str) { return decodeURIComponent(escape(atob(str.replace(/\n/g, '')))); }
+
+  async function ghGetFile() {
+    const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}?ref=${GH_BRANCH}`;
+    const res = await fetch(url, {
+      headers: { 'Authorization': 'Bearer ' + ghToken(), 'Accept': 'application/vnd.github+json' }
+    });
+    if (res.status === 404) return null;            // file doesn't exist yet
+    if (!res.ok) throw new Error('GET ' + res.status);
+    return res.json();                              // { sha, content, ... }
+  }
+
+  async function pushToGitHub() {
+    if (!ghToken()) { ghMsg('err', 'צריך קודם לחבר token'); return; }
+    setGhBusy(true);
+    ghMsg('info', 'מעלה לגיטהאב…');
+    try {
+      const data = load();
+      const payload = {
+        app: 'weight-tracker', version: 1,
+        exportedAt: new Date().toISOString(),
+        entries: data.entries
+      };
+      const body = JSON.stringify(payload, null, 2);
+
+      let sha = null;
+      const existing = await ghGetFile();
+      if (existing && existing.sha) sha = existing.sha;
+
+      const url = `https://api.github.com/repos/${GH_OWNER}/${GH_REPO}/contents/${GH_PATH}`;
+      const res = await fetch(url, {
+        method: 'PUT',
+        headers: { 'Authorization': 'Bearer ' + ghToken(), 'Accept': 'application/vnd.github+json' },
+        body: JSON.stringify({
+          message: `Backup: ${data.entries.length} entries (${todayStr()})`,
+          content: b64encode(body),
+          branch: GH_BRANCH,
+          ...(sha ? { sha } : {})
+        })
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.message || ('PUT ' + res.status));
+      }
+      ghMsg('ok', `גובו ${data.entries.length} רשומות לגיטהאב בהצלחה ✓`);
+    } catch (e) {
+      ghMsg('err', 'שגיאה בגיבוי: ' + describeGhErr(e));
+    } finally {
+      setGhBusy(false);
+    }
+  }
+
+  async function pullFromGitHub() {
+    if (!ghToken()) { ghMsg('err', 'צריך קודם לחבר token'); return; }
+    setGhBusy(true);
+    ghMsg('info', 'מושך מגיטהאב…');
+    try {
+      const file = await ghGetFile();
+      if (!file) { ghMsg('info', 'עדיין אין גיבוי בגיטהאב — גבה קודם.'); return; }
+      const parsed = JSON.parse(b64decode(file.content));
+      const incoming = Array.isArray(parsed) ? parsed : parsed.entries;
+      if (!Array.isArray(incoming)) throw new Error('פורמט לא תקין');
+
+      const data = load();
+      const map = {};
+      for (const en of data.entries) map[en.date] = en.weight;
+      let added = 0;
+      for (const en of incoming) {
+        if (en && typeof en.date === 'string' && typeof en.weight === 'number'
+            && en.weight >= 30 && en.weight <= 300 && !isSaturday(en.date)) {
+          map[en.date] = en.weight; added++;
+        }
+      }
+      const merged = Object.keys(map).sort().map(d => ({ date: d, weight: map[d] }));
+      save({ entries: merged });
+      render();
+      ghMsg('ok', `נמשכו ${added} רשומות מגיטהאב ✓`);
+    } catch (e) {
+      ghMsg('err', 'שגיאה בשחזור: ' + describeGhErr(e));
+    } finally {
+      setGhBusy(false);
+    }
+  }
+
+  function setGhBusy(busy) {
+    document.querySelectorAll('.btn-backup.gh').forEach(b => b.disabled = busy);
+  }
+
+  function describeGhErr(e) {
+    const m = String(e.message || e);
+    if (m.includes('401')) return 'ה-token לא תקף או פג. צור token חדש וחבר מחדש.';
+    if (m.includes('403')) return 'אין הרשאה. ודא שה-token כולל גישת כתיבה לריפו.';
+    if (m.includes('Failed to fetch')) return 'אין חיבור לאינטרנט / נחסם.';
+    return m;
   }
 
   // ── Render: current week ──────────────────────────────────────
@@ -893,6 +1106,7 @@
   });
 
   render();
+  refreshGhUI();
 </script>
 </body>
 </html>
