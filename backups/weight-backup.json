@@ -1,7 +1,7 @@
 {
   "app": "weight-tracker",
   "version": 1,
-  "exportedAt": "2026-06-21T04:52:17.623Z",
+  "exportedAt": "2026-06-22T04:45:30.284Z",
   "entries": [
     {
       "date": "2026-06-02",
@@ -42,9 +42,13 @@
     {
       "date": "2026-06-21",
       "weight": 91.1
+    },
+    {
+      "date": "2026-06-22",
+      "weight": 89.6
     }
   ],
-  "points": 40,
+  "points": 45,
   "trivia": {
     "2026-06-19": {
       "id": 14,
@@ -63,6 +67,12 @@
       "chosen": 0,
       "correct": true,
       "pts": 10
+    },
+    "2026-06-22": {
+      "id": 17,
+      "chosen": 0,
+      "correct": true,
+      "pts": 5
     }
   }
 }
