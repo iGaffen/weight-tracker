@@ -915,6 +915,8 @@
 
     const gain     = (a - p).toFixed(1);
     const isCurrent = latest === getWeekStart(todayStr());
+    // Show the roast only on Friday (last weighing day) for the current in-progress week
+    if (isCurrent && !isFriday(todayStr())) { card.style.display = 'none'; return; }
     const roast    = ROASTS[((daysSince(latest) % ROASTS.length) + ROASTS.length) % ROASTS.length].replace('{g}', gain);
     const foot     = isCurrent
       ? `השבוע (עד כה) ${formatWeekRange(latest)} · ${gain} ק"ג מעל ממוצע השבוע הקודם`
