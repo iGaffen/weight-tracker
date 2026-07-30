@@ -300,6 +300,32 @@
 
     .empty-week { color: var(--text2); font-size: 15px; padding: 8px 0 16px; }
 
+    /* ── Total loss ─────────────────────────────────────────────── */
+
+    .loss-big {
+      font-family: 'Suez One', serif;
+      font-size: 52px;
+      font-weight: 400;
+      line-height: 1;
+      letter-spacing: -0.01em;
+      direction: ltr;
+      text-align: right;
+    }
+
+    .loss-big .unit {
+      font-family: 'Frank Ruhl Libre', serif;
+      font-size: 18px;
+      font-weight: 500;
+      margin-right: 4px;
+    }
+
+    .loss-big.down { color: #5dcf90; }
+    .loss-big.up   { color: var(--danger2); }
+    .loss-big.flat { color: var(--silver); }
+
+    .loss-sub   { font-size: 13px; color: var(--text2); margin-top: 6px; }
+    .loss-range { font-size: 11px; color: var(--text3); margin-top: 3px; }
+
     /* ── History ────────────────────────────────────────────────── */
 
     .history-list { display: flex; flex-direction: column; }
@@ -602,6 +628,9 @@
     </div>
   </header>
 
+  <!-- Total weight lost so far -->
+  <div class="card" id="total-loss-card"></div>
+
   <!-- Howler roast (shown only when last finished week went up) -->
   <div class="card howler-card" id="roast-card" style="display:none"></div>
 
@@ -748,6 +777,20 @@
   function avg(entries) {
     if (!entries.length) return null;
     return entries.reduce((s, e) => s + e.weight, 0) / entries.length;
+  }
+
+  // Total lost so far = first logged week's average vs. the most recent
+  // week's average (current in-progress week included). Weekly averages
+  // are used on both ends so a single heavy/light day doesn't skew it.
+  function computeTotalLoss(entries) {
+    const wmap  = byWeek(entries);
+    const weeks = Object.keys(wmap).sort();
+    if (!weeks.length) return null;
+    const firstWeek = weeks[0];
+    const lastWeek  = weeks[weeks.length - 1];
+    const firstAvg  = avg(wmap[firstWeek]);
+    const lastAvg   = avg(wmap[lastWeek]);
+    return { firstWeek, lastWeek, firstAvg, lastAvg, loss: firstAvg - lastAvg };
   }
 
   // ── Trivia (Harry Potter, books only) ─────────────────────────
@@ -1248,6 +1291,35 @@
     card.innerHTML = html;
   }
 
+  // ── Render: total loss ──────────────────────────────────────────
+
+  function renderTotalLoss() {
+    const card = document.getElementById('total-loss-card');
+    const data = load();
+    const res  = computeTotalLoss(data.entries);
+
+    if (!res || res.firstWeek === res.lastWeek) {
+      card.innerHTML = `<div class="card-title">סה״כ ירידה במשקל</div><div class="empty-week">${res ? 'יופיע לאחר שיהיה נתון משבוע נוסף' : 'עדיין אין נתונים'}</div>`;
+      return;
+    }
+
+    const { firstWeek, lastWeek, firstAvg, lastAvg, loss } = res;
+    let cls, sign, verb;
+    if (Math.abs(loss) < 0.05) { cls = 'flat'; sign = '';  verb = 'ללא שינוי'; }
+    else if (loss > 0)         { cls = 'down'; sign = '-'; verb = 'ירדת בסך הכל'; }
+    else                       { cls = 'up';   sign = '+'; verb = 'עלית בסך הכל'; }
+
+    const curWs     = getWeekStart(todayStr());
+    const isPartial = lastWeek === curWs && !isFriday(todayStr());
+
+    card.innerHTML = `
+      <div class="card-title">סה״כ ירידה במשקל</div>
+      <div class="loss-big ${cls}">${sign}${Math.abs(loss).toFixed(1)}<span class="unit">ק״ג</span></div>
+      <div class="loss-sub">${verb} · מ-${firstAvg.toFixed(1)} ל-${lastAvg.toFixed(1)} ק״ג${isPartial ? ' (כולל השבוע הנוכחי, טרם הסתיים)' : ''}</div>
+      <div class="loss-range">משבוע ${formatShort(firstWeek)} ועד שבוע ${formatShort(lastWeek)}</div>
+    `;
+  }
+
   // ── Render: history ───────────────────────────────────────────
 
   function renderHistory() {
@@ -1422,6 +1494,7 @@
 
   function render() {
     renderCurrentWeek();
+    renderTotalLoss();
     renderHistory();
     renderTrivia();
     renderRoast();
